@@ -1,4 +1,20 @@
-# Sarvam AI TTS Dataset Report
+"""Script to update the markdown report and compile it to a professional PDF using fpdf2."""
+import os
+import sys
+import shutil
+
+# Ensure UTF-8 output
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except:
+    pass
+
+REPORT_MD = r"F:\tts_dataset\reports\sarvam_tts_dataset_report.md"
+if not os.path.exists(os.path.dirname(REPORT_MD)):
+    os.makedirs(os.path.dirname(REPORT_MD), exist_ok=True)
+
+# Define exact markdown report content matching user requirements
+report_content = """# Sarvam AI TTS Dataset Report
 
 ## 1. Project Overview
 I built a complete Text-to-Speech (TTS) training dataset for Indian English (en-IN) and Hindi (hi-IN) using YouTube-sourced clean, single-speaker educational and lecture audio clips. The pipeline includes automatic audio downloading, audio format conversion, silence-based segmentation, transcription via Sarvam ASR, emotion/style tagging using Sarvam LLM, automated quality filtering, manual quality control, and packaging as a HuggingFace-compatible dataset.
@@ -92,3 +108,104 @@ All high and medium-risk clips were manually listened to and corrected or reject
 - Add 3-4 more clean, single-speaker Hindi lecture sources to balance the language representation.
 - Run full human QC on all transcribed segments.
 - Balance the emotion/style tags across the dataset.
+"""
+
+# Write markdown report
+with open(REPORT_MD, "w", encoding="utf-8") as f:
+    f.write(report_content)
+print(f"[OK] Wrote markdown report to {REPORT_MD}")
+
+LOCAL_REPORT_MD = r"f:\sarvam-new\reports\sarvam_tts_dataset_report.md"
+os.makedirs(os.path.dirname(LOCAL_REPORT_MD), exist_ok=True)
+with open(LOCAL_REPORT_MD, "w", encoding="utf-8") as f:
+    f.write(report_content)
+print(f"[OK] Wrote markdown report to {LOCAL_REPORT_MD}")
+
+# Let's generate the PDF using fpdf2 cleanly
+try:
+    from fpdf import FPDF
+    
+    class PDF(FPDF):
+        def header(self):
+            self.set_font('Helvetica', 'B', 10)
+            self.set_text_color(100, 100, 100)
+            self.cell(0, 10, 'Sarvam AI TTS Dataset Report', align='R')
+            self.ln(15)
+
+        def footer(self):
+            self.set_y(-15)
+            self.set_font('Helvetica', 'I', 8)
+            self.set_text_color(150, 150, 150)
+            self.cell(0, 10, f'Page {self.page_no()}', align='C')
+
+    # Standard A4 size: 210mm x 297mm
+    # With 20mm margins, effective page width is 170mm
+    pdf = PDF()
+    pdf.set_margins(20, 20, 20)
+    pdf.add_page()
+    
+    # Title Page / Header
+    pdf.set_font('Helvetica', 'B', 22)
+    pdf.set_text_color(20, 40, 80)
+    pdf.cell(170, 15, "Sarvam AI TTS Dataset Report", align='C', new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+    
+    pdf.set_font('Helvetica', '', 11)
+    pdf.set_text_color(40, 40, 40)
+    
+    lines = report_content.split('\n')
+    for line in lines:
+        line = line.strip()
+        if not line:
+            pdf.ln(3)
+            continue
+            
+        # Clean non-latin symbols
+        line = line.replace('—', '-').replace('–', '-').replace('“', '"').replace('”', '"').replace('’', "'").replace('•', '-')
+        
+        if line.startswith('# '):
+            # Main title is already done
+            continue
+        elif line.startswith('## '):
+            pdf.ln(5)
+            pdf.set_font('Helvetica', 'B', 14)
+            pdf.set_text_color(30, 60, 120)
+            title = line[3:]
+            pdf.cell(170, 10, title, new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font('Helvetica', '', 11)
+            pdf.set_text_color(40, 40, 40)
+        elif line.startswith('### '):
+            pdf.ln(3)
+            pdf.set_font('Helvetica', 'B', 12)
+            pdf.set_text_color(40, 80, 150)
+            title = line[4:]
+            pdf.cell(170, 8, title, new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font('Helvetica', '', 11)
+            pdf.set_text_color(40, 40, 40)
+        elif line.startswith('- '):
+            pdf.set_font('Helvetica', '', 11)
+            text = "  * " + line[2:]
+            pdf.multi_cell(170, 6, text)
+        elif line.startswith('*') and line.endswith('*'):
+            pdf.set_font('Helvetica', 'I', 10)
+            pdf.set_text_color(80, 80, 80)
+            pdf.multi_cell(170, 6, line.strip('*'))
+            pdf.set_font('Helvetica', '', 11)
+            pdf.set_text_color(40, 40, 40)
+        else:
+            pdf.set_font('Helvetica', '', 11)
+            line = line.replace('**', '')
+            pdf.multi_cell(170, 6, line)
+            
+    pdf_path = r"F:\tts_dataset\reports\sarvam_tts_dataset_report.pdf"
+    pdf.output(pdf_path)
+    print(f"[OK] Generated PDF report at {pdf_path}")
+    
+    local_pdf_path = r"f:\sarvam-new\reports\sarvam_tts_dataset_report.pdf"
+    shutil.copy2(pdf_path, local_pdf_path)
+    print(f"[OK] Copied PDF report to {local_pdf_path}")
+
+except Exception as e:
+    import traceback
+    traceback.print_exc()
+    print(f"[ERROR] Failed to generate PDF: {e}")
