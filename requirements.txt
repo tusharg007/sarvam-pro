@@ -1,0 +1,6 @@
+yt-dlp
+pydub
+requests
+datasets
+huggingface_hub
+soundfile
